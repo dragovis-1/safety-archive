@@ -91,7 +91,8 @@ main{min-width:0}
 .filters h2{margin:0;font-size:14px}
 .link{background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer;padding:0}
 .filters label{display:grid;gap:6px;font-size:12px;color:var(--muted)}
-.filters select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.filters label{min-width:0}
+.filters select{width:100%;min-width:0;text-overflow:ellipsis;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
 .filters .note{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;line-height:1.7;margin:0}
 
 .list-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:6px}
@@ -131,6 +132,24 @@ mark{background:var(--hl);color:inherit;border-radius:2px}
 .sheet-foot{display:flex;flex-wrap:wrap;gap:8px}
 .sheet-foot a,.sheet-foot button{font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:none;cursor:pointer;color:var(--fg);text-decoration:none}
 
+/* law articles */
+.ch-head{font-size:12px;color:var(--muted);font-weight:600;padding:14px 2px 2px;border-bottom:1px solid var(--line)}
+.ch-head:first-child{padding-top:0}
+.card .law-x{white-space:pre-line;-webkit-line-clamp:3}
+.lawty{font-size:11px;font-weight:600;border-radius:4px;padding:2px 7px;background:var(--rail);color:var(--lime)}
+.artno{font-family:var(--mono);font-size:12px;color:var(--fg)}
+.amend{color:var(--muted);font-size:.86em}
+.refs{display:flex;flex-wrap:wrap;gap:6px}
+.refs button,.refs a{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;text-align:left;color:var(--fg);text-decoration:none;line-height:1.45}
+.refs button b,.refs a b{font-weight:600;margin-right:4px}
+.refs button:hover,.refs a:hover{border-color:var(--muted)}
+.refs .ext{color:var(--muted)}
+.refs .plain{background:none;border:0;padding:0;border-radius:0;font-size:12px;color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--chip);color:var(--chip-fg);border-radius:999px;padding:3px 4px 3px 10px;font-size:12px}
+.pill button{background:none;border:0;cursor:pointer;color:inherit;font-size:13px;padding:0 6px}
+.back{background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer;padding:0;justify-self:start}
+
 .info{max-width:70ch;display:grid;gap:14px}
 .info h2{margin:0}
 .info p,.info li{color:var(--muted)}
@@ -140,7 +159,8 @@ mark{background:var(--hl);color:inherit;border-radius:2px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--rail);color:var(--rail-fg);padding:10px 16px;border-radius:999px;font-size:13px;z-index:20}
 
 @media (max-width:860px){
-  #app{grid-template-columns:1fr}
+  #app{grid-template-columns:minmax(0,1fr)}
+  aside{min-width:0}
   aside{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px;padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .logo{width:36px;height:36px;font-size:18px}
   nav{display:flex;width:100%;gap:4px;overflow-x:auto}
@@ -149,7 +169,7 @@ mark{background:var(--hl);color:inherit;border-radius:2px}
   .topbar{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .wrap{padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));gap:20px}
   .cols{grid-template-columns:1fr;gap:16px}
-  .filters{position:static;grid-template-columns:1fr 1fr;gap:10px}
+  .filters{position:static;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
   .filters header,.filters .note{grid-column:1/-1}
   .card{padding:16px}
 }
@@ -176,6 +196,7 @@ mark{background:var(--hl);color:inherit;border-radius:2px}
       <div class="eyebrow">Shared archive</div>
       <button data-view="search" aria-current="page">▦ 사고사례 검색</button>
       <button data-view="fav">☆ 관심 사례 <span class="n" id="favN">0</span></button>
+      <button data-view="law">§ 법령 조문</button>
       <button data-view="info">☰ 데이터 안내</button>
     </nav>
     <div class="rail-foot">
@@ -221,9 +242,41 @@ mark{background:var(--hl);color:inherit;border-radius:2px}
               <select id="sort" aria-label="정렬"><option value="rel">관련도순</option><option value="new">최신 발생순</option><option value="old">오래된 순</option></select>
             </div>
           </div>
-          <p class="sub" id="sub">공식 자료의 사고 개요를 그대로 수록했습니다. 카드를 누르면 상세 내용과 비슷한 사례가 나옵니다.</p>
+          <p class="sub" id="sub">공식 자료의 사고 개요를 그대로 수록했습니다. 카드를 누르면 상세 내용과 비슷한 사례, 관련 조문이 나옵니다.</p>
+          <p class="sub" id="artFilter" hidden></p>
           <div class="cards" id="cards"></div>
           <button class="more" id="more" type="button" hidden>더 보기</button>
+        </section>
+      </div>
+    </div>
+
+    <div class="wrap" id="v-law" hidden>
+      <section class="hero">
+        <div class="eyebrow">Know the rule. Close the gap.</div>
+        <h1>사고를 막는 기준, 조문에서 바로 확인하세요.</h1>
+        <p>산업안전보건법부터 안전보건규칙, 원자력안전법까지. 현행 법령 조문을 검색하고 관련 사고사례로 이어서 볼 수 있습니다.</p>
+        <div class="stats"><div><b id="lwN">-</b><span>수록 법령</span></div><div><b id="lwA">-</b><span>조문</span></div><div><b id="lwSrc" style="font-size:15px">-</b><span id="lwUpd"></span></div></div>
+      </section>
+      <section class="search">
+        <form id="lqForm">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="lq" type="search" placeholder="어떤 조문을 찾으시나요? 예: 추락방호망, 밀폐공간 감시인" autocomplete="off">
+          <button class="btn" type="submit">검색 ↗</button>
+        </form>
+        <div class="chips" id="lquick"><span>빠른 검색</span></div>
+      </section>
+      <div class="cols">
+        <section class="filters" aria-label="법령 선택">
+          <header><h2>법령 선택</h2><button class="link" id="lreset" type="button">초기화 ↺</button></header>
+          <label for="fLaw">법령<select id="fLaw"></select></label>
+          <label for="fCh">편·장·절<select id="fCh"></select></label>
+          <p class="note" id="lawNote">ⓘ 조문 원문은 법제처 국가법령정보센터 자료입니다. 법적 판단은 반드시 원문과 전문가 확인을 거치세요.</p>
+        </section>
+        <section>
+          <div class="list-head"><h2 id="lTitle">조문<em id="lCount">0</em></h2></div>
+          <p class="sub" id="lSub">조문을 누르면 전체 내용과 관련 사고사례가 나옵니다.</p>
+          <div class="cards" id="lcards"></div>
+          <button class="more" id="lmore" type="button" hidden>더 보기</button>
         </section>
       </div>
     </div>
@@ -236,6 +289,9 @@ mark{background:var(--hl);color:inherit;border-radius:2px}
         <p>현재 <b id="infoN">-</b>건을 수록했고, 원본 전체는 <b id="apiTotal">-</b>건입니다. 자료는 매일 새벽 자동으로 갱신됩니다. 마지막 갱신: <b id="updated">-</b></p>
         <div style="overflow-x:auto"><table id="typeTable"><thead><tr><th>사고 유형</th><th class="num">건수</th></tr></thead><tbody></tbody></table></div>
         <p>원문 게시판: <a href="https://www.kosha.or.kr/kosha/data/machine.do" target="_blank" rel="noopener">안전보건공단 국내재해사례</a> · <a href="https://www.data.go.kr/data/15121001/openapi.do" target="_blank" rel="noopener">공공데이터포털 API</a></p>
+        <h2 style="margin-top:12px">법령 조문</h2>
+        <p>법령 조문은 <b>법제처 국가법령정보센터</b>의 현행 법령입니다. <span id="lawSrcInfo">-</span></p>
+        <p>사고사례의 ‘관련 조문’은 사고 유형과 설비·작업 태그를 기준으로 미리 정해 둔 표에 따라 자동으로 붙습니다. 해당 사고에 실제로 적용된 조문이나 위반 판단이 아니라, 비슷한 위험을 다루는 대표 조문을 안내하는 참고 정보입니다.</p>
       </section>
     </div>
   </main>
@@ -264,7 +320,7 @@ function terms(q){
   });
 }
 let fav=new Set(JSON.parse(store.get(KEY_FAV)||"[]"));
-let state={q:"",type:"",biz:"",year:"",reg:"",sort:"rel",view:"search",shown:30};
+let state={q:"",type:"",biz:"",year:"",reg:"",sort:"rel",view:"search",shown:30,art:""};
 let result=[];
 
 function score(d,groups){
@@ -275,7 +331,10 @@ function score(d,groups){
 }
 function run(){
   const groups=terms(state.q);
-  let rows=DATA.filter(d=>(!state.type||d.ty===state.type)&&(!state.biz||d.b===state.biz)&&(!state.year||d.y==state.year)&&(!state.reg||d.r===state.reg)&&(state.view!=="fav"||fav.has(d.id)));
+  const artHit=state.art&&state.view!=="fav"?caseMatcher(state.art):null;
+  let rows=DATA.filter(d=>(!state.type||d.ty===state.type)&&(!state.biz||d.b===state.biz)&&(!state.year||d.y==state.year)&&(!state.reg||d.r===state.reg)&&(state.view!=="fav"||fav.has(d.id))&&(!artHit||artHit(d)));
+  const af=$("#artFilter");af.hidden=!state.art||state.view==="fav";
+  if(state.art){const a=ART[state.art];af.innerHTML=`<span class="pill">관련 조문: ${a?esc(a.law.short+" "+a.n+" "+a.t):esc(state.art)}<button type="button" aria-label="조문 조건 해제" id="artOff">✕</button></span>`;$("#artOff").onclick=()=>{state.art="";state.shown=30;run()}}
   if(groups.length){rows=rows.map(d=>[score(d,groups),d]).filter(x=>x[0]>0);
     rows.sort((a,b)=>state.sort==="rel"?b[0]-a[0]||key(b[1])-key(a[1]):0);rows=rows.map(x=>x[1])}
   if(state.sort==="new"||(state.sort==="rel"&&!groups.length))rows.sort((a,b)=>key(b)-key(a));
@@ -327,33 +386,165 @@ $("#cards").onclick=e=>{const c=e.target.closest(".card");if(!c)return;const id=
   open(id)};
 $("#cards").onkeydown=e=>{if(e.key==="Enter"&&e.target.classList.contains("card"))open(e.target.dataset.id)};
 function open(id){
-  const d=DATA.find(x=>x.id===id);if(!d)return;
+  const d=DATA.find(x=>x.id===id);if(!d)return;sheetFrom=null;
   const sim=DATA.filter(x=>x.id!==d.id&&x.ty===d.ty&&x.tg.some(t=>d.tg.includes(t))).slice(0,4);
   $("#sheetBody").innerHTML=`<div class="meta"><span class="ty" data-k="${d.ty}">${d.ty}</span><span>안전보건공단 · ${esc(d.b)}</span></div>
    <h2 id="shTitle">${esc(d.t)}</h2><p class="body">${esc(d.c)}</p>
    <dl class="kv"><dt>발생</dt><dd>${when(d)}${d.r?" · "+d.r:""}</dd><dt>설비·작업</dt><dd>${d.tg.join(", ")||"-"}</dd><dt>게시번호</dt><dd style="font-family:var(--mono);font-size:12px">${d.id}</dd></dl>
+   <h4>관련 조문 <span style="font-weight:400">· 사고 유형·설비 기준 자동 연결(참고용)</span></h4><div class="refs" id="refs"><span class="hint">조문을 불러오는 중…</span></div>
    ${sim.length?`<h4>비슷한 사례</h4><div class="sim">${sim.map(s=>`<button data-id="${s.id}">${esc(s.t)} <span style="color:var(--muted)">· ${s.y}</span></button>`).join("")}</div>`:""}
    <div class="sheet-foot"><a href="https://www.kosha.or.kr/kosha/data/machine.do" target="_blank" rel="noopener">원문 게시판 ↗</a><button id="cp">개요 복사</button><button id="close" style="margin-left:auto">닫기</button></div>`;
-  $("#sheet").hidden=false;$("#close").focus();
+  $("#sheet").hidden=false;$("#sheetBody").scrollTop=0;$("#close").focus({preventScroll:true});
   $("#close").onclick=()=>$("#sheet").hidden=true;
   $("#cp").onclick=()=>copy(`[${d.ty}] ${d.t}\n${d.c}\n(안전보건공단 국내재해사례, ${when(d)})`,"개요를 복사했습니다");
   document.querySelectorAll(".sim button").forEach(b=>b.onclick=()=>open(b.dataset.id));
+  loadLaws().then(()=>{const box=$("#refs");if(!box)return;
+    const refs=refsFor(d);
+    box.innerHTML=(refs.length?refs.map(refHtml).join(""):'<span class="hint">이 유형에는 아직 연결된 조문이 없습니다.</span>')+commonHtml();
+    box.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>openArt(b.dataset.a,d.id))})
+   .catch(()=>{const box=$("#refs");if(box)box.innerHTML='<span class="hint">조문 자료를 불러오지 못했습니다.</span>'});
 }
+
+/* ---------- laws ---------- */
+let LAWS=[],LMETA={},LINKS={common:[],type:{},tag:{}},ART={},lawsP=null,sheetFrom=null;
+let lstate={q:"",law:"",ch:"",shown:40};
+function loadLaws(){
+  if(!lawsP)lawsP=Promise.all([fetch("data/laws.json",{cache:"no-cache"}).then(r=>r.json()),fetch("data/law_links.json",{cache:"no-cache"}).then(r=>r.json())])
+    .then(([l,k])=>{LMETA=l;LAWS=l.laws||[];LINKS=k;
+      LAWS.forEach(law=>law.articles.forEach(a=>{a.law=law;a.key=law.id+":"+a.k;ART[a.key]=a}));
+      initLaw()}).catch(e=>{lawsP=null;throw e});
+  return lawsP;
+}
+/* names for laws linked before their data exists (e.g. 중대재해처벌법 until the API runs) */
+const LAW_NAME={sanan:"산업안전보건법",gijun:"산업안전보건기준에 관한 규칙",jungdae:"중대재해 처벌 등에 관한 법률",wonja:"원자력안전법"};
+const LAW_SHORT={sanan:"산안법",gijun:"안전보건규칙",jungdae:"중대재해처벌법",wonja:"원자력안전법"};
+const artNo=k=>{const [n,s]=k.split("-");return "제"+n+"조"+(s?"의"+s:"")};
+function lawUrl(lawName,k){return "https://www.law.go.kr/법령/"+encodeURIComponent(lawName.replace(/\s/g,""))+(k?"/"+encodeURIComponent(artNo(k)):"")}
+function refsFor(d){
+  /* 설비마다 대표 조문 1개 → 사고유형 조문 → 나머지 설비 조문, 최대 6개 */
+  const out=[],seen=new Set(),add=r=>{const key=r[0]+":"+r[1];if(!seen.has(key)){seen.add(key);out.push(key)}};
+  const tags=d.tg.map(t=>LINKS.tag[t]||[]);
+  tags.forEach(rs=>rs[0]&&add(rs[0]));(LINKS.type[d.ty]||[]).forEach(add);tags.forEach(rs=>rs.slice(1).forEach(add));
+  return out.slice(0,6);
+}
+function commonHtml(){return LINKS.common.length?`<p class="hint" style="width:100%;margin-top:4px">공통: ${LINKS.common.map(r=>{const key=r[0]+":"+r[1],a=ART[key];
+  return a?`<button type="button" class="plain" data-a="${key}">${esc(a.law.short)} ${a.n}(${esc(a.t)})</button>`:`<a class="plain" href="${lawUrl(LAW_NAME[r[0]]||r[0],r[1])}" target="_blank" rel="noopener">${esc(LAW_SHORT[r[0]]||r[0])} ${artNo(r[1])} ↗</a>`}).join(" · ")}</p>`:""}
+function refHtml(key){
+  const a=ART[key];
+  if(a)return `<button type="button" data-a="${key}"><b>${esc(a.law.short)} ${a.n}</b>${esc(a.t)}</button>`;
+  const [lid,k]=key.split(":");const name=LAW_NAME[lid]||lid;
+  return `<a href="${lawUrl(name,k)}" target="_blank" rel="noopener"><b>${esc(LAW_SHORT[lid]||name)} ${artNo(k)}</b><span class="ext">법제처에서 보기 ↗</span></a>`;
+}
+/* which articles point at which types/tags (reverse of law_links) */
+let REV=null;
+function rev(){if(REV)return REV;REV={};
+  const put=(r,kind,v)=>{const key=r[0]+":"+r[1];(REV[key]=REV[key]||{type:[],tag:[]})[kind].push(v)};
+  Object.entries(LINKS.type).forEach(([t,rs])=>rs.forEach(r=>put(r,"type",t)));
+  Object.entries(LINKS.tag).forEach(([t,rs])=>rs.forEach(r=>put(r,"tag",t)));return REV}
+const RELN={};
+function relCount(key){if(!DATA.length)return 0;if(!(key in RELN))RELN[key]=rev()[key]?DATA.filter(caseMatcher(key)).length:0;return RELN[key]}
+function caseMatcher(key){const r=rev()[key];if(!r)return()=>false;return d=>r.type.includes(d.ty)||d.tg.some(t=>r.tag.includes(t))}
+function fmtBody(x){return esc(x).replace(/(&lt;(?:개정|신설|전문개정|제목개정|본조신설|타법개정)[^&]*?&gt;|\[(?:전문개정|본조신설|제목개정|종전|제\d+조[^\]]*이동)[^\]]*\])/g,'<span class="amend">$1</span>')}
+function openArt(key,fromCase){
+  const a=ART[key];if(!a)return;sheetFrom=fromCase||null;
+  const hit=caseMatcher(key),rel=DATA.filter(hit).sort((x,y)=>key2(y)-key2(x));
+  const r=rev()[key];
+  $("#sheetBody").innerHTML=`${fromCase?'<button class="back" id="back">← 사고사례로 돌아가기</button>':""}
+   <div class="meta"><span class="lawty">${esc(a.law.short)}</span><span>${esc(a.ch||a.law.name)}</span></div>
+   <h2 id="shTitle">${a.n} ${esc(a.t)}</h2><p class="body">${fmtBody(a.x)}</p>
+   <dl class="kv"><dt>법령</dt><dd>${esc(a.law.name)}</dd><dt>시행</dt><dd>${esc(a.law.effective||"-")}${a.law.prom?` · <span style="color:var(--muted)">${esc(a.law.prom)}</span>`:""}</dd></dl>
+   ${r?`<h4>관련 사고사례 ${rel.length.toLocaleString()}건 <span style="font-weight:400">· ${esc([...r.type,...r.tag].join(", "))}</span></h4>
+     <div class="sim">${rel.slice(0,4).map(s=>`<button data-id="${s.id}">${esc(s.t)} <span style="color:var(--muted)">· ${s.y}</span></button>`).join("")}</div>
+     ${rel.length>4?`<button class="back" id="allRel">관련 사례 ${rel.length.toLocaleString()}건 모두 보기 →</button>`:""}`:""}
+   <div class="sheet-foot"><a href="${lawUrl(a.law.name,a.k)}" target="_blank" rel="noopener">법제처 원문 ↗</a><button id="cp">조문 복사</button><button id="close" style="margin-left:auto">닫기</button></div>`;
+  $("#sheet").hidden=false;$("#sheetBody").scrollTop=0;$("#close").focus({preventScroll:true});
+  $("#close").onclick=()=>$("#sheet").hidden=true;
+  if(fromCase)$("#back").onclick=()=>open(fromCase);
+  $("#cp").onclick=()=>copy(`${a.law.name} ${a.n}(${a.t})\n${a.x}`,"조문을 복사했습니다");
+  document.querySelectorAll(".sim button").forEach(b=>b.onclick=()=>open(b.dataset.id));
+  if($("#allRel"))$("#allRel").onclick=()=>{$("#sheet").hidden=true;go("search");
+    ["#fType","#fBiz","#fYear","#fReg"].forEach(s=>$(s).value="");Object.assign(state,{type:"",biz:"",year:"",reg:"",art:key});search("")};
+}
+const key2=d=>d.y*100+d.m;
+let lawInited=false;
+function initLaw(){
+  if(lawInited)return;lawInited=true;
+  const total=LAWS.reduce((s,l)=>s+l.articles.length,0);
+  $("#lwN").textContent=LAWS.length;$("#lwA").textContent=total.toLocaleString();
+  const api=LMETA.source==="api";
+  $("#lwSrc").textContent=api?"법제처 API":"PDF 미리보기";$("#lwUpd").textContent=(api?"매일 갱신 · ":"법령별 시행일 기준 · ")+(LMETA.updated||"");
+  $("#lawSrcInfo").textContent=api?`법제처 Open API로 매일 새벽 자동 갱신합니다. 마지막 갱신: ${LMETA.updated}.`:
+    `지금은 국가법령정보센터에서 받은 PDF를 조문 단위로 나눈 미리보기 자료입니다(줄바꿈 부분 띄어쓰기가 일부 어긋날 수 있음). 법제처 Open API가 연결되면 매일 자동 갱신으로 바뀝니다.`;
+  $("#fLaw").innerHTML=`<option value="">전체 법령 (${total.toLocaleString()})</option>`+LAWS.map(l=>`<option value="${l.id}">${esc(l.short)} (${l.articles.length})</option>`).join("");
+  lstate.law=(LAWS.find(l=>l.id==="sanan")||LAWS[0]||{}).id||"";$("#fLaw").value=lstate.law;fillCh();
+  const q=$("#lquick");["추락방호망","안전난간","밀폐공간","크레인","지게차","작업계획서","화재감시자","중대재해"].forEach(t=>{const b=document.createElement("button");b.className="chip";b.type="button";b.textContent=t;b.onclick=()=>lsearch(lstate.q===t?"":t);q.appendChild(b)});
+  lrun();
+}
+function fillCh(){
+  const law=LAWS.find(l=>l.id===lstate.law);const chs=law?[...new Set(law.articles.map(a=>a.ch).filter(Boolean))]:[];
+  $("#fCh").innerHTML=`<option value="">${law?"전체 편·장":"법령을 먼저 고르세요"}</option>`+chs.map(c=>`<option value="${esc(c)}">${esc(c.split(" · ").slice(-1)[0])}</option>`).join("");
+  $("#fCh").disabled=!chs.length;lstate.ch="";
+}
+let lresult=[];
+function lrun(){
+  const groups=terms(lstate.q);
+  let rows=[];LAWS.forEach(l=>{if(!lstate.law||l.id===lstate.law)rows.push(...l.articles)});
+  if(lstate.ch)rows=rows.filter(a=>a.ch===lstate.ch);
+  if(groups.length){
+    rows=rows.map(a=>{let s=0;for(const g of groups){let b=0;for(const w of g){if(a.t.includes(w))b=Math.max(b,w===g[0]?6:4);else if(a.x.includes(w))b=Math.max(b,w===g[0]?2:1)}if(!b)return[0,a];s+=b}return[s,a]}).filter(x=>x[0]>0);
+    rows.sort((x,y)=>y[0]-x[0]);rows=rows.map(x=>x[1]);
+  }
+  lresult=rows;lrender(groups.flat());
+}
+function lrender(ws){
+  const law=LAWS.find(l=>l.id===lstate.law);
+  $("#lCount").textContent=lresult.length.toLocaleString();
+  $("#lTitle").firstChild.textContent=lstate.q?`‘${lstate.q}’ 조문 검색`:(law?law.name:"전체 법령");
+  $("#lSub").textContent=law&&!lstate.q?`시행 ${law.effective}${law.prom?" · "+law.prom:""} · 조문을 누르면 전체 내용과 관련 사고사례가 나옵니다.`:"조문을 누르면 전체 내용과 관련 사고사례가 나옵니다.";
+  const box=$("#lcards");
+  if(!lresult.length){box.innerHTML='<div class="empty">조건에 맞는 조문이 없습니다. 검색어를 줄이거나 법령을 ‘전체 법령’으로 바꿔 보세요.</div>';$("#lmore").hidden=true;return}
+  let lastCh=null;const grouped=!lstate.q&&!!law;
+  box.innerHTML=lresult.slice(0,lstate.shown).map(a=>{
+    const head=grouped&&a.ch&&a.ch!==lastCh?`<div class="ch-head">${esc(a.ch)}</div>`:"";lastCh=a.ch;
+    const cnt=relCount(a.key);
+    return head+`<article class="card" data-a="${a.key}" tabindex="0">
+    <div class="meta" style="padding-right:0"><span class="lawty">${esc(a.law.short)}</span><span class="artno">${a.n}</span>${!grouped&&a.ch?`<span>· ${esc(a.ch.split(" · ").slice(-1)[0])}</span>`:""}${cnt?`<span style="margin-left:auto">관련 사례 ${cnt.toLocaleString()}건</span>`:""}</div>
+    <h3>${hl(a.t,ws)}</h3><p class="law-x">${hl(a.x,ws)}</p></article>`}).join("");
+  $("#lmore").hidden=lresult.length<=lstate.shown;
+  $("#lmore").textContent=`더 보기 (${(lresult.length-lstate.shown).toLocaleString()}개 남음)`;
+}
+function lsearch(v){lstate.q=v;lstate.shown=40;$("#lq").value=v;document.querySelectorAll("#lquick .chip").forEach(c=>c.setAttribute("aria-pressed",c.textContent===v&&!!v));lrun()}
+$("#lqForm").onsubmit=e=>{e.preventDefault();lsearch($("#lq").value.trim())};
+$("#lq").oninput=e=>{if(!e.target.value)lsearch("")};
+$("#fLaw").onchange=e=>{lstate.law=e.target.value;fillCh();lstate.shown=40;lrun()};
+$("#fCh").onchange=e=>{lstate.ch=e.target.value;lstate.shown=40;lrun()};
+$("#lreset").onclick=()=>{lstate.law="";$("#fLaw").value="";fillCh();lsearch("")};
+$("#lmore").onclick=()=>{lstate.shown+=40;lrender(terms(lstate.q).flat())};
+$("#lcards").onclick=e=>{const c=e.target.closest(".card");if(c)openArt(c.dataset.a)};
+$("#lcards").onkeydown=e=>{if(e.key==="Enter"&&e.target.classList.contains("card"))openArt(e.target.dataset.a)};
 $("#sheet").onclick=e=>{if(e.target.id==="sheet")$("#sheet").hidden=true};
 document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#sheet").hidden=true});
 function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200)}
 function copy(text,msg){navigator.clipboard.writeText(text).then(()=>toast(msg),()=>toast("복사가 막혀 있습니다. 길게 눌러 직접 선택해 주세요"))}
 $("#copyCsv").onclick=()=>{const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
   copy(["사고유형,업종,발생연도,발생월,지역,제목,개요,설비태그,게시번호"].concat(result.map(d=>[d.ty,d.b,d.y,d.m||"",d.r,d.t,d.c,d.tg.join(" "),d.id].map(q).join(","))).join("\n"),`${result.length}건을 CSV로 복사했습니다. 엑셀에 붙여넣으세요`)};
-document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
-  const v=b.dataset.view;document.querySelectorAll("nav button").forEach(x=>x.removeAttribute("aria-current"));b.setAttribute("aria-current","page");
-  $("#v-search").hidden=v==="info";$("#v-info").hidden=v!=="info";$("#crumb").textContent=v==="info"?"데이터 안내":v==="fav"?"관심 사례":"사고사례";
-  state.view=v;state.shown=30;if(v!=="info")run();});
+function go(v){
+  document.querySelectorAll("nav button").forEach(x=>x.toggleAttribute("aria-current",x.dataset.view===v));
+  document.querySelector(`nav button[data-view="${v}"]`).setAttribute("aria-current","page");
+  $("#v-search").hidden=!(v==="search"||v==="fav");$("#v-info").hidden=v!=="info";$("#v-law").hidden=v!=="law";
+  $("#crumb").textContent={info:"데이터 안내",fav:"관심 사례",law:"법령 조문"}[v]||"사고사례";
+  state.view=v;state.shown=30;window.scrollTo(0,0);
+  if(v==="search"||v==="fav")run();
+  if(v==="law"){if(!lawInited)$("#lcards").innerHTML='<div class="empty">조문을 불러오는 중입니다…</div>';
+    loadLaws().catch(()=>$("#lcards").innerHTML='<div class="empty">조문 자료를 불러오지 못했습니다. 새로고침해 주세요.</div>')}
+  if(v==="info")loadLaws().catch(()=>{});
+}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>go(b.dataset.view));
 /* soft gate: page link is already private; this only keeps casual viewers out */
 async function enter(){$("#gate").hidden=true;$("#app").hidden=false;$("#cards").innerHTML='<div class="empty">사례를 불러오는 중입니다…</div>';
   try{const r=await fetch("data/cases.json",{cache:"no-cache"});META=await r.json();DATA=META.cases||[]}catch(e){$("#cards").innerHTML='<div class="empty">자료를 불러오지 못했습니다. 새로고침해 주세요.</div>';return}
   $("#noteN").textContent=DATA.length.toLocaleString();$("#infoN").textContent=DATA.length.toLocaleString();
-  $("#apiTotal").textContent=(META.apiTotal||DATA.length).toLocaleString();$("#updated").textContent=META.updated||"-";init()}
+  $("#apiTotal").textContent=(META.apiTotal||DATA.length).toLocaleString();$("#updated").textContent=META.updated||"-";init();setTimeout(()=>loadLaws().catch(()=>{}),1200)}
 $("#gateForm").onsubmit=e=>{e.preventDefault();if($("#pw").value===PW){store.set(KEY_AUTH,String(Date.now()+8*3600e3));enter()}else $("#pwErr").textContent="비밀번호가 맞지 않습니다. 대소문자를 확인해 주세요."};
 $("#logout").onclick=()=>{store.set(KEY_AUTH,"0");location.reload()};
 if(+store.get(KEY_AUTH)>Date.now())enter();else{$("#gate").hidden=false;$("#pw").focus()}
