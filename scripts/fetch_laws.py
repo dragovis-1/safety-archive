@@ -6,7 +6,10 @@ import json, os, re, sys, time, datetime, urllib.request, urllib.parse
 
 BASE = "https://www.law.go.kr/DRF/"
 HERE = os.path.dirname(__file__)
-HEADERS = {"User-Agent": "Mozilla/5.0 safety-archive", "Accept": "application/json"}
+# 법제처는 신청서에 등록한 도메인을 Referer 헤더로 확인한다(없으면 "필수입력요소 검증 실패")
+SITE = "https://dragovis-1.github.io"
+HEADERS = {"User-Agent": "Mozilla/5.0 safety-archive", "Accept": "application/json",
+           "Referer": SITE + "/safety-archive/", "Origin": SITE}
 LIST = json.load(open(os.path.join(HERE, "laws_list.json"), encoding="utf-8"))
 OUT = "data/laws.json"
 
