@@ -91,9 +91,17 @@ def find_mst(name):
     d = get("lawSearch.do", target="law", query=name, display=100)
     rows = as_list((d.get("LawSearch") or {}).get("law"))
     exact = [r for r in rows if txt(r.get("법령명한글")) == name]
-    cur = [r for r in exact if txt(r.get("현행연혁코드")) in ("현행", "")] or exact
-    if not cur: raise RuntimeError(f"검색 결과에 '{name}' 없음 (후보: {[txt(r.get('법령명한글')) for r in rows[:5]]})")
-    return txt(cur[0].get("법령일련번호")), cur[0]
+    if not exact: raise RuntimeError(f"검색 결과에 '{name}' 없음 (후보: {[txt(r.get('법령명한글')) for r in rows[:5]]})")
+    cur = [r for r in exact if txt(r.get("현행연혁코드")) == "현행"] or exact
+    today = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).strftime("%Y%m%d")
+    ef = lambda r: re.sub(r"\D", "", txt(r.get("시행일자")))
+    inforce = [r for r in cur if ef(r) and ef(r) <= today]
+    # 오늘 시행 중인 판 중 가장 최근 것. 없으면 가장 빨리 시행될 판
+    pick = max(inforce, key=ef) if inforce else min(cur, key=lambda r: ef(r) or "99999999")
+    if len(exact) > 1 or ef(pick) > today:
+        print("  후보: " + " / ".join(f"MST {txt(r.get('법령일련번호'))} 시행 {ef(r)} {txt(r.get('현행연혁코드'))}" for r in exact)
+              + f" → 선택 MST {txt(pick.get('법령일련번호'))}")
+    return txt(pick.get("법령일련번호")), pick
 
 def fmt_date(s):
     s = re.sub(r"\D", "", s or "")
