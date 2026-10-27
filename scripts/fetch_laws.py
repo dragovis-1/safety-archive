@@ -6,27 +6,71 @@ import json, os, re, sys, time, datetime, urllib.request, urllib.parse
 
 BASE = "https://www.law.go.kr/DRF/"
 HERE = os.path.dirname(__file__)
+HEADERS = {"User-Agent": "Mozilla/5.0 safety-archive", "Accept": "application/json"}
 LIST = json.load(open(os.path.join(HERE, "laws_list.json"), encoding="utf-8"))
 OUT = "data/laws.json"
 
+class ApiError(RuntimeError):
+    """법제처가 요청 자체를 거절한 경우(인증·필수값 등). 재시도해도 소용없음"""
+
+def mask(t):
+    return t.replace(OC, "***") if OC else t
+
+def raw_call(url, headers=None):
+    req = urllib.request.Request(url, headers=headers or {})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return r.status, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8", "replace")
+
 def get(path, **q):
-    url = BASE + path + "?" + urllib.parse.urlencode({"OC": OC, "type": "JSON", **q})
+    params = {"OC": OC, "type": "JSON", **q}
+    url = BASE + path + "?" + urllib.parse.urlencode(params)
     last = None
     for i in range(3):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 safety-archive"})
-            with urllib.request.urlopen(req, timeout=60) as r:
-                raw = r.read().decode("utf-8", "replace")
+            code, raw = raw_call(url, HEADERS)
             try:
                 d = json.loads(raw)
             except ValueError:
-                raise RuntimeError("JSON 아님(인증·IP 문제일 수 있음): " + re.sub(r"\s+", " ", raw)[:200])
+                raise ApiError(f"JSON 아님 (HTTP {code}): " + re.sub(r"\s+", " ", mask(raw))[:200])
             if isinstance(d, dict) and ("result" in d or "msg" in d) and len(d) <= 3:
-                raise RuntimeError(f"API 오류: {d}")
+                raise ApiError(f"API 오류: {d}")
             return d
-        except Exception as e:
-            last = e; print(f"  {path} 재시도 {i+1}: {e}", file=sys.stderr); time.sleep(3)
+        except ApiError:
+            raise
+        except Exception as e:  # 네트워크 일시 오류만 재시도
+            last = e; print(f"  {path} 재시도 {i+1}: {mask(str(e))}", file=sys.stderr); time.sleep(3)
     raise last
+
+def probe():
+    """첫 호출이 거절당했을 때, 어떤 요청 모양이 통과하는지 변형을 시도해 로그에 찍는다(OC는 가려서 출력)."""
+    q = {"target": "law", "query": "산업안전보건법"}
+    def url(base=BASE, extra=None, drop=(), typ="JSON"):
+        p = {"OC": OC, "target": "law", "type": typ, "query": "산업안전보건법", **(extra or {})}
+        for k in drop: p.pop(k, None)
+        return base + "lawSearch.do?" + urllib.parse.urlencode(p)
+    ref = {"Referer": "https://dragovis-1.github.io/safety-archive/"}
+    variants = [
+        ("현재 방식(UA+Accept)", url(), HEADERS),
+        ("헤더 없음(파이썬 기본)", url(), {}),
+        ("Referer 추가", url(), {**HEADERS, **ref}),
+        ("Origin+Referer 추가", url(), {**HEADERS, **ref, "Origin": "https://dragovis-1.github.io"}),
+        ("display 제거", url(drop=("display",)), HEADERS),
+        ("query 제거", url(drop=("query",)), HEADERS),
+        ("type=XML", url(typ="XML"), HEADERS),
+        ("law.go.kr (www 없음)", url(base="https://law.go.kr/DRF/"), HEADERS),
+        ("http://", url(base="http://www.law.go.kr/DRF/"), HEADERS),
+    ]
+    print("--- 원인 점검(어떤 모양이 통과하는지) ---", file=sys.stderr)
+    for name, u, h in variants:
+        try:
+            code, raw = raw_call(u, h)
+            print(f"[{name}] HTTP {code}: " + re.sub(r"\s+", " ", mask(raw))[:160], file=sys.stderr)
+        except Exception as e:
+            print(f"[{name}] 접속 실패: {mask(str(e))}", file=sys.stderr)
+    print("---", file=sys.stderr)
 
 def as_list(v):
     if v is None: return []
@@ -103,12 +147,17 @@ def main():
     if os.path.exists(OUT):
         old = {l["id"]: l for l in json.load(open(OUT, encoding="utf-8")).get("laws", [])}
     laws, ok = [], 0
-    for L in LIST:
+    for n, L in enumerate(LIST):
         try:
             got = fetch_one(L); laws.append(got); ok += 1
             print(f"{L['name']}: {len(got['articles'])}개 조문 (시행 {got['effective']})")
+        except ApiError as e:
+            print(f"{L['name']}: 거절됨 - {mask(str(e))}", file=sys.stderr)
+            if L["id"] in old: laws.append(old[L["id"]])
+            if ok == 0:  # 첫 법령부터 거절 → 나머지도 같으니 원인만 찍고 종료
+                probe(); break
         except Exception as e:
-            print(f"{L['name']}: 실패 - {e}", file=sys.stderr)
+            print(f"{L['name']}: 실패 - {mask(str(e))}", file=sys.stderr)
             if L["id"] in old: laws.append(old[L["id"]])
         time.sleep(0.5)
     if not ok: sys.exit("법령을 하나도 못 받음 - 기존 자료 유지 (OC 값, 신청한 API 종류, IP 등록 확인)")
