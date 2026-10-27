@@ -98,6 +98,16 @@ def find_mst(name):
     inforce = [r for r in cur if ef(r) and ef(r) <= today]
     # 오늘 시행 중인 판 중 가장 최근 것. 없으면 가장 빨리 시행될 판
     pick = max(inforce, key=ef) if inforce else min(cur, key=lambda r: ef(r) or "99999999")
+    if ef(pick) > today:
+        # 목록 검색이 시행예정 개정본을 가리키면, 시행일 기준 검색(eflaw, nw=3: 현행)으로 지금 시행 중인 판을 찾는다
+        try:
+            d2 = get("lawSearch.do", target="eflaw", nw=3, query=name, display=100)
+            r2 = [r for r in as_list((d2.get("LawSearch") or {}).get("law")) if txt(r.get("법령명한글")) == name]
+            ok2 = [r for r in r2 if ef(r) and ef(r) <= today]
+            print(f"  eflaw 후보: " + " / ".join(f"MST {txt(r.get('법령일련번호'))} 시행 {ef(r)} {txt(r.get('현행연혁코드'))}" for r in r2))
+            if ok2: pick = max(ok2, key=ef)
+        except Exception as e:
+            print(f"  eflaw 조회 실패(목록 검색 결과 유지): {mask(str(e))}", file=sys.stderr)
     if len(exact) > 1 or ef(pick) > today:
         print("  후보: " + " / ".join(f"MST {txt(r.get('법령일련번호'))} 시행 {ef(r)} {txt(r.get('현행연혁코드'))}" for r in exact)
               + f" → 선택 MST {txt(pick.get('법령일련번호'))}")

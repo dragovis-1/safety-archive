@@ -502,7 +502,11 @@ function lrender(ws){
   $("#lTitle").firstChild.textContent=lstate.q?`‘${lstate.q}’ 조문 검색`:(law?law.name:"전체 법령");
   $("#lSub").textContent=law&&!lstate.q?`시행 ${law.effective}${law.prom?" · "+law.prom:""} · 조문을 누르면 전체 내용과 관련 사고사례가 나옵니다.`:"조문을 누르면 전체 내용과 관련 사고사례가 나옵니다.";
   const box=$("#lcards");
-  if(!lresult.length){box.innerHTML='<div class="empty">조건에 맞는 조문이 없습니다. 검색어를 줄이거나 법령을 ‘전체 법령’으로 바꿔 보세요.</div>';$("#lmore").hidden=true;return}
+  if(!lresult.length){
+    let other=0;if(lstate.q&&lstate.law){const g=terms(lstate.q);LAWS.forEach(l=>{if(l.id!==lstate.law)l.articles.forEach(a=>{if(g.every(grp=>grp.some(w=>a.t.includes(w)||a.x.includes(w))))other++})})}
+    box.innerHTML=`<div class="empty">${other?`선택한 법령(${esc(law?law.short:"")})에는 없지만 <b>다른 법령에 ${other.toLocaleString()}건</b> 있습니다.<br><button class="chip" id="allLaws" type="button" style="margin-top:12px;padding:8px 14px">전체 법령에서 보기 →</button>`:"조건에 맞는 조문이 없습니다. 검색어를 줄이거나 법령을 ‘전체 법령’으로 바꿔 보세요."}</div>`;
+    $("#lmore").hidden=true;
+    if(other)$("#allLaws").onclick=()=>{lstate.law="";$("#fLaw").value="";fillCh();lrun()};return}
   let lastCh=null;const grouped=!lstate.q&&!!law;
   box.innerHTML=lresult.slice(0,lstate.shown).map(a=>{
     const head=grouped&&a.ch&&a.ch!==lastCh?`<div class="ch-head">${esc(a.ch)}</div>`:"";lastCh=a.ch;
