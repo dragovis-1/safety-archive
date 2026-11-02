@@ -178,6 +178,7 @@ mark{background:var(--hl);color:inherit;border-radius:2px}
 .why{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)}
 .cfg{display:grid;gap:12px}
 .cfg label{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.cfg .secret{-webkit-text-security:disc;font-family:var(--mono)}
 .cfg input[type=text],.cfg input[type=password],.cfg select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}
 .cfg .row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
 .prog{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
@@ -750,7 +751,7 @@ $("#aiCfgBtn").onclick=()=>{
    <div class="cfg">
     <label>API 주소 (Base URL)<input type="text" id="cBase" placeholder="예: https://api.openai.com/v1" value="${esc(AICFG.base||"")}"></label>
     <label>모델 이름<input type="text" id="cModel" placeholder="예: gpt-4o-mini, HCX-005, gpt-oss-20b" value="${esc(AICFG.model||"")}"></label>
-    <label>API 키<input type="password" id="cKey" autocomplete="off" value="${esc(AICFG.key||"")}"></label>
+    <label>API 키<input type="text" id="cKey" class="secret" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="llm-api-key-x" data-lpignore="true" data-1p-ignore value="${esc(AICFG.key||"")}"></label>
     <div class="row"><input type="checkbox" id="cKeep" ${AICFG.keep?"checked":""}><label for="cKeep" style="display:inline;color:inherit">이 기기에 키 저장 (공용 PC에서는 끄세요)</label></div>
     <p class="hint">키는 이 브라우저에서 위 주소로만 전송됩니다. 저장하지 않으면 새로고침 때 지워집니다.</p>
    </div>
