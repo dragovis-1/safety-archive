@@ -156,6 +156,32 @@ mark{background:var(--hl);color:inherit;border-radius:2px}
 .info table{border-collapse:collapse;font-size:13px;width:100%}
 .info td,.info th{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left}
 .info .num{text-align:right;font-variant-numeric:tabular-nums}
+/* AI search */
+.ai-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;border-top:1px solid var(--line);padding:10px 4px 0;font-size:12px;color:var(--muted)}
+.ai-bar label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.ai-bar .gear{margin-left:auto;background:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--fg)}
+.badge{font-family:var(--mono);font-size:11px;border-radius:4px;padding:1px 6px;background:var(--chip);color:var(--chip-fg)}
+.badge.off{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.answer{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--lime);border-radius:12px;padding:18px 20px;display:grid;gap:10px}
+.answer h2{margin:0;font-size:15px;display:flex;align-items:center;gap:8px}
+.answer .txt{font-size:15px;line-height:1.85;white-space:pre-wrap;margin:0}
+.answer .txt .cite{display:inline-block;background:var(--chip);color:var(--chip-fg);border:0;border-radius:4px;padding:0 5px;margin:0 1px;font-family:var(--mono);font-size:11px;cursor:pointer;vertical-align:1px}
+.answer .warn{font-size:12px;color:var(--muted);margin:0}
+.trace{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-size:13px}
+.trace summary{cursor:pointer;font-weight:600;font-size:13px}
+.trace ol{margin:10px 0 0;padding-left:0;list-style:none;display:grid;gap:6px;color:var(--muted)}
+.trace ol b{color:var(--fg);font-weight:600}
+.trace pre{margin:8px 0 0;background:var(--bg);border-radius:8px;padding:10px;font-family:var(--mono);font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto}
+.ai-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px;align-items:start}
+.ai-grid h2{margin:0 0 10px;font-size:15px}
+.ai-grid .no{font-family:var(--mono);font-size:11px;font-weight:600;background:var(--rail);color:var(--lime);border-radius:4px;padding:1px 6px}
+.why{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.cfg{display:grid;gap:12px}
+.cfg label{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.cfg input[type=text],.cfg input[type=password],.cfg select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}
+.cfg .row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.prog{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--lime);width:0;transition:width .2s}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--rail);color:var(--rail-fg);padding:10px 16px;border-radius:999px;font-size:13px;z-index:20}
 
 @media (max-width:860px){
@@ -172,6 +198,8 @@ mark{background:var(--hl);color:inherit;border-radius:2px}
   .filters{position:static;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
   .filters header,.filters .note{grid-column:1/-1}
   .card{padding:16px}
+  .ai-grid{grid-template-columns:1fr}
+  .answer{padding:16px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -195,6 +223,7 @@ mark{background:var(--hl);color:inherit;border-radius:2px}
     <nav>
       <div class="eyebrow">Shared archive</div>
       <button data-view="search" aria-current="page">▦ 사고사례 검색</button>
+      <button data-view="ai">✦ AI 검색·질문</button>
       <button data-view="fav">☆ 관심 사례 <span class="n" id="favN">0</span></button>
       <button data-view="law">§ 법령 조문</button>
       <button data-view="info">☰ 데이터 안내</button>
@@ -279,6 +308,29 @@ mark{background:var(--hl);color:inherit;border-radius:2px}
           <button class="more" id="lmore" type="button" hidden>더 보기</button>
         </section>
       </div>
+    </div>
+
+    <div class="wrap" id="v-ai" hidden>
+      <section class="hero">
+        <div class="eyebrow">Ask the archive.</div>
+        <h1>궁금한 걸 물어보세요. 근거와 함께 답합니다.</h1>
+        <p>단어가 달라도 뜻이 비슷하면 찾아냅니다. 사고사례와 법령 조문에서 근거를 찾고, AI 모델이 연결돼 있으면 그 근거로 답을 정리합니다.</p>
+      </section>
+      <section class="search">
+        <form id="aiForm">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>
+          <input id="aq" type="search" placeholder="예: 높은 데서 일하다 떨어진 사고는 어떻게 막아?" autocomplete="off">
+          <button class="btn" type="submit">질문 ↗</button>
+        </form>
+        <div class="chips" id="aquick"><span>예시 질문</span></div>
+        <div class="ai-bar">
+          <label><input type="checkbox" id="useVec"> 의미 검색(임베딩)</label><span id="vecState" class="badge off">꺼짐</span>
+          <span>답변 모델</span><span id="llmState" class="badge off">미연결</span>
+          <button type="button" class="gear" id="aiCfgBtn">⚙ 모델 연결 설정</button>
+        </div>
+        <div class="prog" id="prog" hidden><i></i></div>
+      </section>
+      <div id="aiOut"><div class="empty">질문을 입력하면 근거 사례와 조문을 찾아드립니다.<br><span style="font-size:12px">의미 검색을 켜면 처음 한 번 브라우저에 임베딩 모델(약 120MB)을 받습니다. 모바일 데이터 환경에서는 주의하세요.</span></div></div>
     </div>
 
     <div class="wrap" id="v-info" hidden>
@@ -535,8 +587,9 @@ $("#copyCsv").onclick=()=>{const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
 function go(v){
   document.querySelectorAll("nav button").forEach(x=>x.toggleAttribute("aria-current",x.dataset.view===v));
   document.querySelector(`nav button[data-view="${v}"]`).setAttribute("aria-current","page");
-  $("#v-search").hidden=!(v==="search"||v==="fav");$("#v-info").hidden=v!=="info";$("#v-law").hidden=v!=="law";
-  $("#crumb").textContent={info:"데이터 안내",fav:"관심 사례",law:"법령 조문"}[v]||"사고사례";
+  $("#v-search").hidden=!(v==="search"||v==="fav");$("#v-info").hidden=v!=="info";$("#v-law").hidden=v!=="law";$("#v-ai").hidden=v!=="ai";
+  $("#crumb").textContent={info:"데이터 안내",fav:"관심 사례",law:"법령 조문",ai:"AI 검색·질문"}[v]||"사고사례";
+  if(v==="ai"){aiInit();state.view=v;window.scrollTo(0,0);return}
   state.view=v;state.shown=30;window.scrollTo(0,0);
   if(v==="search"||v==="fav")run();
   if(v==="law"){if(!lawInited)$("#lcards").innerHTML='<div class="empty">조문을 불러오는 중입니다…</div>';
@@ -544,6 +597,175 @@ function go(v){
   if(v==="info")loadLaws().catch(()=>{});
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>go(b.dataset.view));
+/* ---------- AI 검색·질문 (RAG 데모) ----------
+   ① 키워드 점수(BM25, 한글 두 글자 단위) + ② 의미 점수(임베딩 코사인)를 순위 합산(RRF)으로 섞어 근거를 찾고
+   ③ OpenAI 호환 Chat Completions API(사내라면 Hy-NuRi)에 근거를 넘겨 답을 받는다. */
+const KEY_AICFG="sa_ai_cfg",KEY_VEC="sa_ai_vec";
+let IX=null,VEC=null,VMETA=null,VROW=null,vecP=null,encP=null,aiInited=false,aiAbort=null;
+let AICFG=(()=>{try{return JSON.parse(store.get(KEY_AICFG)||"{}")}catch(e){return{}}})();
+const llmReady=()=>!!(AICFG.base&&AICFG.model);
+function toks(s){
+  const out=[];for(const w of String(s).toLowerCase().match(/[가-힣]+|[a-z0-9]+/g)||[]){
+    if(/^[가-힣]+$/.test(w)){if(w.length===1){out.push(w);continue}for(let i=0;i<w.length-1;i++)out.push(w.slice(i,i+2))}
+    else if(w.length>1||/\d/.test(w))out.push(w)}
+  return out;
+}
+function buildIndex(){
+  const docs=[];DATA.forEach(d=>docs.push({k:"c",id:d.id,d}));LAWS.forEach(l=>l.articles.forEach(a=>docs.push({k:"a",id:a.key,a})));
+  const post=new Map(),len=new Uint16Array(docs.length);
+  docs.forEach((o,i)=>{
+    const text=o.k==="c"?`${o.d.t} ${o.d.t} ${o.d.c} ${o.d.tg.join(" ")}`:`${o.a.law.short} ${o.a.t||""} ${o.a.t||""} ${o.a.x.slice(0,800)}`;
+    const ts=toks(text);len[i]=Math.min(ts.length,65535);const tf=new Map();for(const t of ts)tf.set(t,(tf.get(t)||0)+1);
+    for(const [t,n] of tf){let p=post.get(t);if(!p)post.set(t,p=[]);p.push(i*16+Math.min(n,15))}});
+  let avg=0;for(const x of len)avg+=x;IX={docs,post,len,avg:avg/docs.length||1};mapRows();
+}
+function topK(sc,k){const idx=[];for(let i=0;i<sc.length;i++)if(sc[i]>0)idx.push(i);idx.sort((a,b)=>sc[b]-sc[a]);return idx.slice(0,k)}
+function bm25(q){
+  const {docs,post,len,avg}=IX,N=docs.length,sc=new Float32Array(N);
+  for(const t of new Set(toks(q))){const p=post.get(t);if(!p)continue;const idf=Math.log(1+(N-p.length+.5)/(p.length+.5));
+    for(const v of p){const i=v>>4,tf=v&15;sc[i]+=idf*tf*2.2/(tf+1.2*(.25+.75*len[i]/avg))}}
+  return topK(sc,60);
+}
+function mapRows(){if(!IX||!VMETA)return;const m=new Map(VMETA.ids.map((id,r)=>[id,r]));VROW=new Int32Array(IX.docs.length).fill(-1);
+  IX.docs.forEach((o,i)=>{const r=m.get(o.k+":"+o.id);if(r!==undefined)VROW[i]=r})}
+function vsearch(qv){
+  const N=IX.docs.length,dim=VMETA.dim,sc=new Float32Array(N);
+  for(let i=0;i<N;i++){const r=VROW[i];if(r<0)continue;let s=0;const o=r*dim;for(let j=0;j<dim;j++)s+=VEC[o+j]*qv[j];sc[i]=s/127}
+  return topK(sc,60);
+}
+function loadVec(){
+  if(!vecP)vecP=Promise.all([fetch("data/vectors.json",{cache:"no-cache"}).then(r=>{if(!r.ok)throw new Error("noindex");return r.json()}),
+    fetch("data/vectors.bin",{cache:"no-cache"}).then(r=>{if(!r.ok)throw new Error("noindex");return r.arrayBuffer()})])
+    .then(([m,b])=>{VMETA=m;VEC=new Int8Array(b);mapRows()}).catch(e=>{vecP=null;throw e});
+  return vecP;
+}
+function prog(p){const el=$("#prog");if(p==null){el.hidden=true;return}el.hidden=false;el.firstChild.style.width=Math.max(2,Math.min(100,p))+"%"}
+function loadEncoder(){
+  if(window.SA_TEST_ENCODER)return Promise.resolve(window.SA_TEST_ENCODER);
+  if(!encP)encP=(async()=>{
+    const T=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3");
+    const pipe=await T.pipeline("feature-extraction",(VMETA&&VMETA.browserModel)||"Xenova/multilingual-e5-small",
+      {dtype:"q8",progress_callback:p=>{if(p.status==="progress"&&p.total>5e6)prog(p.progress)}});
+    prog(null);return async q=>(await pipe("query: "+q,{pooling:"mean",normalize:true})).data;
+  })().catch(e=>{encP=null;prog(null);throw e});
+  return encP;
+}
+function setBadge(sel,on,txt){const b=$(sel);b.textContent=txt;b.classList.toggle("off",!on)}
+function refreshLlmBadge(){setBadge("#llmState",llmReady(),llmReady()?AICFG.model:"미연결")}
+async function enableVec(){
+  setBadge("#vecState",false,"준비 중…");
+  try{await loadVec()}catch(e){$("#useVec").checked=false;store.set(KEY_VEC,"0");setBadge("#vecState",false,"색인 없음");toast("임베딩 색인(data/vectors.bin)이 아직 없습니다. GitHub Actions에서 만들어집니다");return false}
+  try{await loadEncoder()}catch(e){$("#useVec").checked=false;store.set(KEY_VEC,"0");setBadge("#vecState",false,"모델 불가");toast("임베딩 모델을 받지 못했습니다. 키워드 검색으로 진행합니다");return false}
+  setBadge("#vecState",true,"켜짐 · "+VMETA.ids.length.toLocaleString()+"건");return true;
+}
+function aiInit(){
+  if(!aiInited){aiInited=true;
+    const q=$("#aquick");["높은 곳에서 일하다 떨어진 사고는 어떻게 막아?","맨홀에 들어갔다가 쓰러진 사례","지게차 후진하다 사람을 친 사고","해체·철거 작업 중 무너진 사고와 관련 기준","크레인으로 들어 올리던 자재가 떨어진 사례"]
+      .forEach(t=>{const b=document.createElement("button");b.className="chip";b.type="button";b.textContent=t;b.onclick=()=>{$("#aq").value=t;ask(t)};q.appendChild(b)});
+    refreshLlmBadge();
+    if(store.get(KEY_VEC)==="1"){$("#useVec").checked=true;enableVec()}
+  }
+  loadLaws().catch(()=>{});setTimeout(()=>$("#aq").focus({preventScroll:true}),0);
+}
+$("#useVec").onchange=e=>{store.set(KEY_VEC,e.target.checked?"1":"0");if(e.target.checked)enableVec();else setBadge("#vecState",false,"꺼짐")};
+$("#aiForm").onsubmit=e=>{e.preventDefault();const q=$("#aq").value.trim();if(q)ask(q)};
+const ms=t=>Math.round(performance.now()-t)+"ms";
+function ctxText(r,n){
+  if(r.doc.k==="c"){const d=r.doc.d;return `[${n}] (사고사례 · ${d.ty} · ${d.b} · ${when(d)}) ${d.t}\n${d.c}`}
+  const a=r.doc.a;return `[${n}] (${a.law.name} ${a.n}${a.t?" "+a.t:""})\n${a.x.slice(0,700)}`;
+}
+const SYS="너는 산업안전 사고사례·법령 검색 도우미다. 반드시 아래 [자료]에 있는 내용만 근거로 한국어로 답한다.\n- 근거로 쓴 문장 끝에 [1]처럼 자료 번호를 붙인다.\n- 자료에 없는 내용은 '자료에서 찾지 못했습니다'라고 말하고 추측하지 않는다.\n- 핵심부터 짧게, 필요하면 번호 목록으로 정리한다.\n- 법적 판단(위반 여부 등)은 하지 말고, 조문 원문 확인을 권한다.";
+async function ask(q){
+  if(aiAbort)aiAbort.abort();const ac=new AbortController();aiAbort=ac;
+  const out=$("#aiOut"),T0=performance.now(),steps=[];
+  out.innerHTML='<div class="empty">근거를 찾는 중입니다…</div>';
+  try{await loadLaws()}catch(e){}
+  if(!IX){const t=performance.now();buildIndex();steps.push(`<b>색인 준비</b> · 사례 ${DATA.length.toLocaleString()}건 + 조문 ${(IX.docs.length-DATA.length).toLocaleString()}개 키워드 색인 (${ms(t)}, 처음 한 번)`)}
+  let qv=null;
+  if($("#useVec").checked){
+    try{await loadVec();const enc=await loadEncoder();const t=performance.now();qv=await enc(q);
+      steps.push(`<b>① 질문 임베딩</b> · 질문을 ${qv.length}차원 좌표로 변환 (${ms(t)})`)}
+    catch(e){steps.push(`<b>① 질문 임베딩</b> · 실패 → 키워드만 사용`)}
+  }else steps.push(`<b>① 질문 임베딩</b> · 꺼짐 (키워드만 사용)`);
+  if(ac.signal.aborted)return;
+  const kq=q.replace(/(어떻게|어떤|무엇|뭐야|뭐가|뭐|알려\s*줘|알려|막으려면|막아야|막아|막나|막는|방법|있어|있나|사례|사고|관련|기준|대해서?|경우|하다가|하는|하다|일하다|중에)/g," ");
+  let t=performance.now();const kw=bm25(kq+" "+terms(kq).flat().join(" "));const vs=qv?vsearch(qv):[];
+  const fuse=new Map(),kr=new Map(),vr=new Map();
+  kw.forEach((i,r)=>{kr.set(i,r+1);fuse.set(i,(fuse.get(i)||0)+1/(60+r))});
+  vs.forEach((i,r)=>{vr.set(i,r+1);fuse.set(i,(fuse.get(i)||0)+1/(60+r))});
+  const ranked=[...fuse].sort((a,b)=>b[1]-a[1]).map(([i,s])=>({i,s,doc:IX.docs[i],kr:kr.get(i),vr:vr.get(i)}));
+  const cases=ranked.filter(x=>x.doc.k==="c").slice(0,8),arts=ranked.filter(x=>x.doc.k==="a").slice(0,5);
+  steps.push(`<b>② 근거 찾기</b> · 키워드 후보 ${kw.length}개${qv?` + 의미 후보 ${vs.length}개`:""} → 순위 합산 → 사례 ${cases.length}건 · 조문 ${arts.length}개 (${ms(t)})`);
+  const ctx=[...cases.slice(0,6),...arts.slice(0,4)];ctx.forEach((r,n)=>r.n=n+1);
+  const messages=[{role:"system",content:SYS},{role:"user",content:`[자료]\n${ctx.map(r=>ctxText(r,r.n)).join("\n\n")}\n\n[질문]\n${q}`}];
+  steps.push(`<b>③ 근거 묶기</b> · 상위 ${ctx.length}개를 번호 붙여 프롬프트로 구성 (약 ${messages[1].content.length.toLocaleString()}자)`);
+  const reqShow={model:AICFG.model||"(모델 이름)",temperature:.2,stream:true,messages:[messages[0],{role:"user",content:messages[1].content.replace(/\n([^\n\[]{90})[^\n]+/g,"\n$1…")}]};
+  const why=r=>[r.kr?`키워드 ${r.kr}위`:"",r.vr?`의미 ${r.vr}위`:""].filter(Boolean).join(" · ");
+  const caseCard=r=>{const d=r.doc.d;return `<article class="card" data-id="${d.id}" tabindex="0">
+    <div class="meta" style="padding-right:0">${r.n?`<span class="no">${r.n}</span>`:""}<span class="ty" data-k="${d.ty}">${d.ty}</span><span>${esc(d.b)} · ${when(d)}</span><span class="why">${why(r)}</span></div>
+    <h3>${esc(d.t)}</h3><p>${esc(d.c)}</p></article>`};
+  const artCard=r=>{const a=r.doc.a;return `<article class="card" data-a="${a.key}" tabindex="0">
+    <div class="meta" style="padding-right:0">${r.n?`<span class="no">${r.n}</span>`:""}<span class="lawty">${esc(a.law.short)}</span><span class="artno">${a.n}</span><span class="why">${why(r)}</span></div>
+    <h3>${esc(a.t||"")}</h3><p class="law-x">${esc(a.x)}</p></article>`};
+  out.innerHTML=`<div style="display:grid;gap:20px">
+    <section class="answer" id="ans"><h2>✦ 답변 <span class="badge ${llmReady()?"":"off"}">${llmReady()?esc(AICFG.model):"모델 미연결"}</span></h2>
+      <p class="txt" id="ansTxt">${llmReady()?"답변을 만드는 중…":"답변 모델이 연결되지 않아 <b>찾은 근거만</b> 보여드립니다. ‘⚙ 모델 연결 설정’에 OpenAI 호환 주소를 넣으면 아래 근거로 답을 만듭니다. 사내에서는 그 자리에 Hy-NuRi 주소를 넣으면 됩니다."}</p>
+      <p class="warn">AI 답변은 틀릴 수 있습니다. 번호를 눌러 원문 근거를 확인하세요.</p></section>
+    <details class="trace" id="trace"><summary>처리 과정 보기 (RAG 4단계)</summary><ol id="steps">${steps.map(s=>`<li>${s}</li>`).join("")}</ol>
+      <p class="hint" style="margin-top:10px">답변 모델 API로 보내는 요청(본문 일부 생략)</p><pre>${esc("POST "+(AICFG.base||"https://(사내 Hy-NuRi 주소)/v1").replace(/\/+$/,"")+"/chat/completions\nAuthorization: Bearer ****\n\n"+JSON.stringify(reqShow,null,2))}</pre></details>
+    <div class="ai-grid"><section><h2>근거 사고사례</h2><div class="cards">${cases.map(caseCard).join("")||'<div class="empty">찾지 못했습니다.</div>'}</div></section>
+      <section><h2>근거 조문</h2><div class="cards">${arts.map(artCard).join("")||'<div class="empty">찾지 못했습니다.</div>'}</div></section></div></div>`;
+  const byN=Object.fromEntries(ctx.map(r=>[r.n,r]));
+  out.onclick=e=>{const c=e.target.closest(".cite");if(c){const r=byN[c.dataset.n];if(r)r.doc.k==="c"?open(r.doc.id):openArt(r.doc.id);return}
+    const card=e.target.closest(".card");if(!card)return;card.dataset.id?open(card.dataset.id):openArt(card.dataset.a)};
+  out.onkeydown=e=>{if(e.key==="Enter"&&e.target.classList.contains("card"))e.target.click()};
+  if(!llmReady()||!ctx.length){steps.push(`<b>④ 답변 생성</b> · ${ctx.length?"모델 미연결 → 건너뜀":"근거 없음 → 건너뜀"}`);$("#steps").innerHTML=steps.map(s=>`<li>${s}</li>`).join("");return}
+  t=performance.now();let txt="",first=0;const box=$("#ansTxt");
+  const paint=()=>{box.innerHTML=fmtAnswer(txt)};
+  try{await callLLM(messages,d=>{if(!first)first=performance.now();txt+=d;paint()},ac.signal);
+    steps.push(`<b>④ 답변 생성</b> · ${esc(AICFG.model)} 응답 (첫 글자 ${first?Math.round(first-t)+"ms":"-"}, 전체 ${ms(t)})`);
+    if(!txt.trim())box.textContent="모델이 빈 답을 돌려줬습니다.";}
+  catch(e){if(ac.signal.aborted)return;box.innerHTML=`답변 모델 호출에 실패했습니다: <code>${esc(e.message||e)}</code><br><span style="font-size:12px">주소·키·모델 이름을 확인하세요. 브라우저 직접 호출(CORS)을 막는 서비스도 있습니다.</span>`;
+    steps.push(`<b>④ 답변 생성</b> · 실패`)}
+  $("#steps").innerHTML=steps.map(s=>`<li>${s}</li>`).join("")+`<li>전체 ${ms(T0)}</li>`;
+}
+function fmtAnswer(s){
+  return esc(s).replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>")
+    .replace(/\[(\d+(?:\s*[,，]\s*\d+)*)\]/g,(_,g)=>g.split(/\s*[,，]\s*/).map(n=>`<button type="button" class="cite" data-n="${n}">${n}</button>`).join(""));
+}
+async function callLLM(messages,onDelta,signal,stream=true){
+  const url=AICFG.base.replace(/\/+$/,"")+"/chat/completions";
+  const r=await fetch(url,{method:"POST",signal,headers:{"Content-Type":"application/json",...(AICFG.key?{Authorization:"Bearer "+AICFG.key}:{})},
+    body:JSON.stringify({model:AICFG.model,messages,temperature:.2,stream})});
+  if(!r.ok)throw new Error("HTTP "+r.status+" "+(await r.text().catch(()=>"")).slice(0,200));
+  if(!(r.headers.get("content-type")||"").includes("event-stream")){const j=await r.json();onDelta(((j.choices||[])[0]||{}).message?.content||"");return}
+  const rd=r.body.getReader(),dec=new TextDecoder();let buf="";
+  for(;;){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let n;
+    while((n=buf.indexOf("\n"))>=0){const line=buf.slice(0,n).trim();buf=buf.slice(n+1);if(!line.startsWith("data:"))continue;
+      const d=line.slice(5).trim();if(d==="[DONE]")return;try{const c=JSON.parse(d).choices?.[0]?.delta?.content;if(c)onDelta(c)}catch(e){}}}
+}
+$("#aiCfgBtn").onclick=()=>{
+  $("#sheetBody").innerHTML=`<h2 id="shTitle">답변 모델 연결</h2>
+   <p class="hint">OpenAI 호환(Chat Completions) API라면 무엇이든 연결됩니다. 사내 업무망에서는 Hy-NuRi 운영부서가 발급한 <b>주소·키·모델 이름</b>을 넣으면 이 화면이 그대로 동작합니다.</p>
+   <div class="cfg">
+    <label>API 주소 (Base URL)<input type="text" id="cBase" placeholder="예: https://api.openai.com/v1" value="${esc(AICFG.base||"")}"></label>
+    <label>모델 이름<input type="text" id="cModel" placeholder="예: gpt-4o-mini, HCX-005, gpt-oss-20b" value="${esc(AICFG.model||"")}"></label>
+    <label>API 키<input type="password" id="cKey" autocomplete="off" value="${esc(AICFG.key||"")}"></label>
+    <div class="row"><input type="checkbox" id="cKeep" ${AICFG.keep?"checked":""}><label for="cKeep" style="display:inline;color:inherit">이 기기에 키 저장 (공용 PC에서는 끄세요)</label></div>
+    <p class="hint">키는 이 브라우저에서 위 주소로만 전송됩니다. 저장하지 않으면 새로고침 때 지워집니다.</p>
+   </div>
+   <div class="sheet-foot"><button id="cTest">연결 시험</button><button id="cClear">지우기</button><button id="cSave" style="margin-left:auto">저장</button><button id="close">닫기</button></div>`;
+  $("#sheet").hidden=false;$("#close").onclick=()=>$("#sheet").hidden=true;
+  const read=()=>({base:$("#cBase").value.trim(),model:$("#cModel").value.trim(),key:$("#cKey").value.trim(),keep:$("#cKeep").checked});
+  const save=c=>{AICFG=c;store.set(KEY_AICFG,JSON.stringify(c.keep?c:{...c,key:""}));refreshLlmBadge()};
+  $("#cSave").onclick=()=>{save(read());$("#sheet").hidden=true;toast(llmReady()?"모델 연결을 저장했습니다":"주소와 모델 이름을 모두 넣어야 연결됩니다")};
+  $("#cClear").onclick=()=>{save({});$("#sheet").hidden=true;toast("모델 연결을 지웠습니다")};
+  $("#cTest").onclick=async()=>{const prev=AICFG;AICFG=read();if(!llmReady()){AICFG=prev;toast("주소와 모델 이름을 넣어 주세요");return}
+    const b=$("#cTest");b.textContent="시험 중…";let got="";
+    try{await callLLM([{role:"user",content:"'연결 성공'이라고만 답해."}],d=>got+=d,undefined,false);toast("응답: "+(got.trim().slice(0,40)||"(빈 답)"))}
+    catch(e){toast("실패: "+String(e.message||e).slice(0,60))}finally{AICFG=prev;b.textContent="연결 시험"}};
+};
+
 /* soft gate: page link is already private; this only keeps casual viewers out */
 async function enter(){$("#gate").hidden=true;$("#app").hidden=false;$("#cards").innerHTML='<div class="empty">사례를 불러오는 중입니다…</div>';
   try{const r=await fetch("data/cases.json",{cache:"no-cache"});META=await r.json();DATA=META.cases||[]}catch(e){$("#cards").innerHTML='<div class="empty">자료를 불러오지 못했습니다. 새로고침해 주세요.</div>';return}
