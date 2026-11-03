@@ -828,10 +828,14 @@ $("#srvBtn").onclick=()=>{
    </div>
    <div class="sheet-foot"><button id="sTest">연결 확인</button><button id="sClear">지우기</button><button id="sSave" style="margin-left:auto">저장</button><button id="close">닫기</button></div>`;
   $("#sheet").hidden=false;$("#close").onclick=()=>$("#sheet").hidden=true;
-  const save=()=>{SRV={url:$("#sUrl").value.trim(),key:$("#sKey").value.trim()};store.set(KEY_SRV,JSON.stringify(SRV))};
+  const save=()=>{SRV={url:$("#sUrl").value.trim().replace(/\/health\/?$/,""),key:$("#sKey").value.trim().replace(/^["',\s]+|["',\s]+$/g,"")};store.set(KEY_SRV,JSON.stringify(SRV))};
   $("#sSave").onclick=async()=>{save();$("#sheet").hidden=true;toast(await pingSrv()?"PC 서버에 연결했습니다":"저장했지만 서버가 응답하지 않습니다")};
   $("#sTest").onclick=async()=>{save();const b=$("#sTest");b.textContent="확인 중…";const ok=await pingSrv();b.textContent="연결 확인";
-    toast(ok?`연결됨 · ${srvInfo.chat_model} · 색인 ${srvInfo.count.toLocaleString()}건`:srvInfo&&srvInfo.status==="indexing"?`색인 중입니다 (${srvInfo.done}/${srvInfo.total})`:"응답이 없습니다. PC에서 start.bat이 켜져 있는지 확인하세요")};
+    const badge=$("#srvState").textContent;
+    toast(ok?`연결됨 · ${srvInfo.chat_model} · 색인 ${srvInfo.count.toLocaleString()}건`
+      :badge==="키 오류"?"서버는 응답했지만 접근 키가 맞지 않습니다. config.json의 api_key를 다시 복사하세요"
+      :badge.startsWith("색인 중")?`색인 중입니다 (${srvInfo.done}/${srvInfo.total})`
+      :"응답이 없습니다. PC에서 start.bat 창 두 개가 켜져 있는지, 서버 주소가 최신인지 확인하세요")};
   $("#sClear").onclick=()=>{SRV={};store.set(KEY_SRV,"{}");srvOK=false;setBadge("#srvState",false,"미연결");$("#sheet").hidden=true;toast("PC 서버 연결을 지웠습니다")};
 };
 $("#aiCfgBtn").onclick=()=>{
