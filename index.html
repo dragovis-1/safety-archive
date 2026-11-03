@@ -326,8 +326,10 @@ mark{background:var(--hl);color:inherit;border-radius:2px}
         <div class="chips" id="aquick"><span>예시 질문</span></div>
         <div class="ai-bar">
           <label><input type="checkbox" id="useVec"> 의미 검색(임베딩)</label><span id="vecState" class="badge off">꺼짐</span>
+          <span>내 PC 서버</span><span id="srvState" class="badge off">미연결</span>
           <span>답변 모델</span><span id="llmState" class="badge off">미연결</span>
-          <button type="button" class="gear" id="aiCfgBtn">⚙ 모델 연결 설정</button>
+          <button type="button" class="gear" id="srvBtn">🖥 PC 서버 연결</button>
+          <button type="button" class="gear" id="aiCfgBtn" style="margin-left:0">⚙ 모델 연결 설정</button>
         </div>
         <div class="prog" id="prog" hidden><i></i></div>
       </section>
@@ -666,6 +668,7 @@ function aiInit(){
     refreshLlmBadge();
     if(store.get(KEY_VEC)==="1"){$("#useVec").checked=true;enableVec()}
   }
+  pingSrv();
   loadLaws().catch(()=>{});setTimeout(()=>$("#aq").focus({preventScroll:true}),0);
 }
 $("#useVec").onchange=e=>{store.set(KEY_VEC,e.target.checked?"1":"0");if(e.target.checked)enableVec();else setBadge("#vecState",false,"꺼짐")};
@@ -676,7 +679,18 @@ function ctxText(r,n){
   const a=r.doc.a;return `[${n}] (${a.law.name} ${a.n}${a.t?" "+a.t:""})\n${a.x.slice(0,700)}`;
 }
 const SYS="너는 산업안전 사고사례·법령 검색 도우미다. 반드시 아래 [자료]에 있는 내용만 근거로 한국어로 답한다.\n- 근거로 쓴 문장 끝에 [1]처럼 자료 번호를 붙인다.\n- 자료에 없는 내용은 '자료에서 찾지 못했습니다'라고 말하고 추측하지 않는다.\n- 핵심부터 짧게, 필요하면 번호 목록으로 정리한다.\n- 법적 판단(위반 여부 등)은 하지 말고, 조문 원문 확인을 권한다.";
+const aiWhy=r=>[r.kr?`키워드 ${r.kr}위`:"",r.vr?`의미 ${r.vr}위`:""].filter(Boolean).join(" · ");
+function aiCaseCard(r){const d=r.doc.d;return `<article class="card" data-id="${d.id}" tabindex="0">
+    <div class="meta" style="padding-right:0">${r.n?`<span class="no">${r.n}</span>`:""}<span class="ty" data-k="${d.ty}">${d.ty}</span><span>${esc(d.b)} · ${when(d)}</span><span class="why">${aiWhy(r)}</span></div>
+    <h3>${esc(d.t)}</h3><p>${esc(d.c)}</p></article>`}
+function aiArtCard(r){const a=r.doc.a;return `<article class="card" data-a="${a.key}" tabindex="0">
+    <div class="meta" style="padding-right:0">${r.n?`<span class="no">${r.n}</span>`:""}<span class="lawty">${esc(a.law.short)}</span><span class="artno">${a.n}</span><span class="why">${aiWhy(r)}</span></div>
+    <h3>${esc(a.t||"")}</h3><p class="law-x">${esc(a.x)}</p></article>`}
 async function ask(q){
+  if(SRV.url&&(srvOK||await pingSrv()))return askServer(q);
+  return askLocal(q);
+}
+async function askLocal(q){
   if(aiAbort)aiAbort.abort();const ac=new AbortController();aiAbort=ac;
   const out=$("#aiOut"),T0=performance.now(),steps=[];
   out.innerHTML='<div class="empty">근거를 찾는 중입니다…</div>';
@@ -701,13 +715,7 @@ async function ask(q){
   const messages=[{role:"system",content:SYS},{role:"user",content:`[자료]\n${ctx.map(r=>ctxText(r,r.n)).join("\n\n")}\n\n[질문]\n${q}`}];
   steps.push(`<b>③ 근거 묶기</b> · 상위 ${ctx.length}개를 번호 붙여 프롬프트로 구성 (약 ${messages[1].content.length.toLocaleString()}자)`);
   const reqShow={model:AICFG.model||"(모델 이름)",temperature:.2,stream:true,messages:[messages[0],{role:"user",content:messages[1].content.replace(/\n([^\n\[]{90})[^\n]+/g,"\n$1…")}]};
-  const why=r=>[r.kr?`키워드 ${r.kr}위`:"",r.vr?`의미 ${r.vr}위`:""].filter(Boolean).join(" · ");
-  const caseCard=r=>{const d=r.doc.d;return `<article class="card" data-id="${d.id}" tabindex="0">
-    <div class="meta" style="padding-right:0">${r.n?`<span class="no">${r.n}</span>`:""}<span class="ty" data-k="${d.ty}">${d.ty}</span><span>${esc(d.b)} · ${when(d)}</span><span class="why">${why(r)}</span></div>
-    <h3>${esc(d.t)}</h3><p>${esc(d.c)}</p></article>`};
-  const artCard=r=>{const a=r.doc.a;return `<article class="card" data-a="${a.key}" tabindex="0">
-    <div class="meta" style="padding-right:0">${r.n?`<span class="no">${r.n}</span>`:""}<span class="lawty">${esc(a.law.short)}</span><span class="artno">${a.n}</span><span class="why">${why(r)}</span></div>
-    <h3>${esc(a.t||"")}</h3><p class="law-x">${esc(a.x)}</p></article>`};
+  const caseCard=aiCaseCard,artCard=aiArtCard;
   out.innerHTML=`<div style="display:grid;gap:20px">
     <section class="answer" id="ans"><h2>✦ 답변 <span class="badge ${llmReady()?"":"off"}">${llmReady()?esc(AICFG.model):"모델 미연결"}</span></h2>
       <p class="txt" id="ansTxt">${llmReady()?"답변을 만드는 중…":"답변 모델이 연결되지 않아 <b>찾은 근거만</b> 보여드립니다. ‘⚙ 모델 연결 설정’에 OpenAI 호환 주소를 넣으면 아래 근거로 답을 만듭니다. 사내에서는 그 자리에 Hy-NuRi 주소를 넣으면 됩니다."}</p>
@@ -745,6 +753,87 @@ async function callLLM(messages,onDelta,signal,stream=true){
     while((n=buf.indexOf("\n"))>=0){const line=buf.slice(0,n).trim();buf=buf.slice(n+1);if(!line.startsWith("data:"))continue;
       const d=line.slice(5).trim();if(d==="[DONE]")return;try{const c=JSON.parse(d).choices?.[0]?.delta?.content;if(c)onDelta(c)}catch(e){}}}
 }
+/* ---------- 내 PC AI 서버 (Ollama + 검색 서버) ---------- */
+const KEY_SRV="sa_ai_srv";
+let SRV=(()=>{try{return JSON.parse(store.get(KEY_SRV)||"{}")}catch(e){return{}}})(),srvOK=false,srvInfo=null,srvImported=false;
+(()=>{const m=location.hash.match(/srv=([^&]+)&key=([^&]+)/);if(!m)return;
+  SRV={url:decodeURIComponent(m[1]),key:decodeURIComponent(m[2])};store.set(KEY_SRV,JSON.stringify(SRV));srvImported=true;
+  try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}})();
+const srvUrl=p=>SRV.url.replace(/\/+$/,"")+p;
+async function pingSrv(){
+  if(!SRV.url){srvOK=false;setBadge("#srvState",false,"미연결");return false}
+  setBadge("#srvState",false,"확인 중…");
+  try{const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),6000);
+    const j=await (await fetch(srvUrl("/health"),{signal:ac.signal,cache:"no-store",headers:{"X-API-Key":SRV.key||""}})).json();clearTimeout(tm);srvInfo=j;
+    if(j.key_ok===false){srvOK=false;setBadge("#srvState",false,"키 오류");return false}
+    if(j.ok){srvOK=true;setBadge("#srvState",true,"연결 · "+j.chat_model);return true}
+    srvOK=false;setBadge("#srvState",false,j.status==="indexing"?`색인 중 ${j.done}/${j.total}`:j.status==="error"?"오류":"준비 중");return false}
+  catch(e){srvOK=false;setBadge("#srvState",false,"꺼짐");return false}
+}
+let CASE_BY_ID=null;
+function srvDoc(x){
+  if(x.k==="c"){CASE_BY_ID=CASE_BY_ID||new Map(DATA.map(d=>[d.id,d]));const d=CASE_BY_ID.get(x.id);return d?{k:"c",id:d.id,d}:null}
+  const a=ART[x.id];return a?{k:"a",id:x.id,a}:null;
+}
+async function askServer(q){
+  if(aiAbort)aiAbort.abort();const ac=new AbortController();aiAbort=ac;
+  const out=$("#aiOut"),T0=performance.now(),steps=[],model=(srvInfo&&srvInfo.chat_model)||"PC 서버";
+  out.innerHTML='<div class="empty">내 PC AI 서버에 묻는 중입니다…</div>';
+  try{await loadLaws()}catch(e){}
+  let r;
+  try{r=await fetch(srvUrl("/ask"),{method:"POST",signal:ac.signal,headers:{"Content-Type":"application/json","X-API-Key":SRV.key||""},body:JSON.stringify({q})})}
+  catch(e){if(ac.signal.aborted)return;srvOK=false;setBadge("#srvState",false,"꺼짐");toast("PC 서버에 연결하지 못해 브라우저 검색으로 찾습니다");return askLocal(q)}
+  if(!r.ok){let msg="";try{msg=(await r.json()).error||""}catch(e){}
+    if(r.status===401){setBadge("#srvState",false,"키 오류");toast("PC 서버 접근 키가 맞지 않습니다")}else toast("PC 서버 오류: "+(msg||r.status));
+    srvOK=false;return askLocal(q)}
+  let txt="",byN={},box=null,ok=false;
+  const paintSteps=()=>{const el=$("#steps");if(el)el.innerHTML=steps.map(s=>`<li>${s}</li>`).join("")};
+  const onEvent=ev=>{
+    if(ev.type==="step"){steps.push(esc(ev.text).replace(/^([①-④])/,"<b>$1</b>"));paintSteps()}
+    else if(ev.type==="sources"){
+      const mk=x=>{const doc=srvDoc(x);return doc?{doc,n:x.n,kr:x.kr,vr:x.vr}:null};
+      const cases=(ev.cases||[]).map(mk).filter(Boolean),arts=(ev.arts||[]).map(mk).filter(Boolean);
+      [...cases,...arts].forEach(x=>{if(x.n)byN[x.n]=x});
+      out.innerHTML=`<div style="display:grid;gap:20px">
+        <section class="answer"><h2>✦ 답변 <span class="badge">${esc(model)}</span><span class="badge">내 PC</span></h2>
+          <p class="txt" id="ansTxt">답변을 만드는 중…</p>
+          <p class="warn">AI 답변은 틀릴 수 있습니다. 번호를 눌러 원문 근거를 확인하세요.</p></section>
+        <details class="trace"><summary>처리 과정 보기 (내 PC 서버)</summary><ol id="steps"></ol>
+          <p class="hint" style="margin-top:10px">사이트 → 내 PC 서버로 보낸 요청</p><pre>${esc("POST "+srvUrl("/ask")+"\nX-API-Key: ****\n\n"+JSON.stringify({q},null,2))}</pre></details>
+        <div class="ai-grid"><section><h2>근거 사고사례</h2><div class="cards">${cases.map(aiCaseCard).join("")||'<div class="empty">찾지 못했습니다.</div>'}</div></section>
+          <section><h2>근거 조문</h2><div class="cards">${arts.map(aiArtCard).join("")||'<div class="empty">찾지 못했습니다.</div>'}</div></section></div></div>`;
+      box=$("#ansTxt");paintSteps();
+      out.onclick=e=>{const c=e.target.closest(".cite");if(c){const x=byN[c.dataset.n];if(x)x.doc.k==="c"?open(x.doc.id):openArt(x.doc.id);return}
+        const card=e.target.closest(".card");if(!card)return;card.dataset.id?open(card.dataset.id):openArt(card.dataset.a)};
+      out.onkeydown=e=>{if(e.key==="Enter"&&e.target.classList.contains("card"))e.target.click()};
+    }
+    else if(ev.type==="delta"){txt+=ev.text;if(box)box.innerHTML=fmtAnswer(txt)}
+    else if(ev.type==="error"){if(box)box.innerHTML=`<code>${esc(ev.text)}</code>`}
+    else if(ev.type==="done"){ok=true;steps.push(`전체 ${ms(T0)} (서버 처리 ${ev.ms}ms)`);paintSteps();if(box&&!txt.trim())box.textContent="모델이 빈 답을 돌려줬습니다."}
+  };
+  try{const rd=r.body.getReader(),dec=new TextDecoder();let buf="";
+    for(;;){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;
+      while((i=buf.indexOf("\n\n"))>=0){const chunk=buf.slice(0,i);buf=buf.slice(i+2);
+        for(const line of chunk.split("\n"))if(line.startsWith("data:")){try{onEvent(JSON.parse(line.slice(5)))}catch(e){}}}}}
+  catch(e){if(ac.signal.aborted)return;if(box)box.innerHTML+=`<br><code>연결이 끊겼습니다: ${esc(e.message||e)}</code>`}
+  if(!ok&&!box){toast("PC 서버 응답이 비정상이라 브라우저 검색으로 찾습니다");return askLocal(q)}
+}
+$("#srvBtn").onclick=()=>{
+  $("#sheetBody").innerHTML=`<h2 id="shTitle">내 PC AI 서버 연결</h2>
+   <p class="hint">PC에서 <b>start.bat</b>을 실행하면 나오는 링크를 열면 자동으로 채워집니다. 직접 넣을 때는 터널 주소와 접근 키를 입력하세요.</p>
+   <div class="cfg">
+    <label>서버 주소<input type="text" id="sUrl" placeholder="예: https://xxxx.trycloudflare.com" value="${esc(SRV.url||"")}"></label>
+    <label>접근 키<input type="text" id="sKey" class="secret" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="srv-key-x" data-lpignore="true" data-1p-ignore value="${esc(SRV.key||"")}"></label>
+    <p class="hint">PC가 꺼져 있으면 자동으로 브라우저 검색으로 바뀝니다. PC를 다시 켜면 주소가 바뀌니 새 링크로 다시 연결하세요.</p>
+   </div>
+   <div class="sheet-foot"><button id="sTest">연결 확인</button><button id="sClear">지우기</button><button id="sSave" style="margin-left:auto">저장</button><button id="close">닫기</button></div>`;
+  $("#sheet").hidden=false;$("#close").onclick=()=>$("#sheet").hidden=true;
+  const save=()=>{SRV={url:$("#sUrl").value.trim(),key:$("#sKey").value.trim()};store.set(KEY_SRV,JSON.stringify(SRV))};
+  $("#sSave").onclick=async()=>{save();$("#sheet").hidden=true;toast(await pingSrv()?"PC 서버에 연결했습니다":"저장했지만 서버가 응답하지 않습니다")};
+  $("#sTest").onclick=async()=>{save();const b=$("#sTest");b.textContent="확인 중…";const ok=await pingSrv();b.textContent="연결 확인";
+    toast(ok?`연결됨 · ${srvInfo.chat_model} · 색인 ${srvInfo.count.toLocaleString()}건`:srvInfo&&srvInfo.status==="indexing"?`색인 중입니다 (${srvInfo.done}/${srvInfo.total})`:"응답이 없습니다. PC에서 start.bat이 켜져 있는지 확인하세요")};
+  $("#sClear").onclick=()=>{SRV={};store.set(KEY_SRV,"{}");srvOK=false;setBadge("#srvState",false,"미연결");$("#sheet").hidden=true;toast("PC 서버 연결을 지웠습니다")};
+};
 $("#aiCfgBtn").onclick=()=>{
   $("#sheetBody").innerHTML=`<h2 id="shTitle">답변 모델 연결</h2>
    <p class="hint">OpenAI 호환(Chat Completions) API라면 무엇이든 연결됩니다. 사내 업무망에서는 Hy-NuRi 운영부서가 발급한 <b>주소·키·모델 이름</b>을 넣으면 이 화면이 그대로 동작합니다.</p>
@@ -771,7 +860,8 @@ $("#aiCfgBtn").onclick=()=>{
 async function enter(){$("#gate").hidden=true;$("#app").hidden=false;$("#cards").innerHTML='<div class="empty">사례를 불러오는 중입니다…</div>';
   try{const r=await fetch("data/cases.json",{cache:"no-cache"});META=await r.json();DATA=META.cases||[]}catch(e){$("#cards").innerHTML='<div class="empty">자료를 불러오지 못했습니다. 새로고침해 주세요.</div>';return}
   $("#noteN").textContent=DATA.length.toLocaleString();$("#infoN").textContent=DATA.length.toLocaleString();
-  $("#apiTotal").textContent=(META.apiTotal||DATA.length).toLocaleString();$("#updated").textContent=META.updated||"-";init();setTimeout(()=>loadLaws().catch(()=>{}),1200)}
+  $("#apiTotal").textContent=(META.apiTotal||DATA.length).toLocaleString();$("#updated").textContent=META.updated||"-";init();setTimeout(()=>loadLaws().catch(()=>{}),1200);
+  if(srvImported){go("ai");toast("내 PC 서버 연결 정보를 저장했습니다")}}
 $("#gateForm").onsubmit=e=>{e.preventDefault();if($("#pw").value===PW){store.set(KEY_AUTH,String(Date.now()+8*3600e3));enter()}else $("#pwErr").textContent="비밀번호가 맞지 않습니다. 대소문자를 확인해 주세요."};
 $("#logout").onclick=()=>{store.set(KEY_AUTH,"0");location.reload()};
 if(+store.get(KEY_AUTH)>Date.now())enter();else{$("#gate").hidden=false;$("#pw").focus()}
